@@ -37,10 +37,12 @@ fileInput.addEventListener("change", async () => {
   const rows =
     XLSX.utils.sheet_to_json(firstSheet);
   console.log(rows);
-  // looks like the first row is omitted. maybe presumed it is a header/label?
+  // sheet_to_json() generates an array of objects.
+  // and keys are taken from the first row.
 
   const firstRow = rows[0] as Record<string, unknown>;
-  // as Record<string, unknown> specifies object type?
+  // as Record<string, unknown>: type assertion
+  // this does not change value, but does change the way the compiler sees it.
 
   const columnDefs:Array<object> =
   Object.keys(firstRow).map(col => (
