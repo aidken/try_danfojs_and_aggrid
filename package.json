@@ -11,5 +11,9 @@
   "devDependencies": {
     "typescript": "~6.0.2",
     "vite": "^8.2.2"
+  },
+  "dependencies": {
+    "ag-grid-community": "^36.1.0",
+    "xlsx": "^0.18.5"
   }
 }

@@ -1,60 +1,69 @@
-import './style.css'
-import heroImg from './assets/hero.png'
-import typescriptLogo from './assets/typescript.svg'
-import viteLogo from './assets/vite.svg'
-import { setupCounter } from './counter.ts'
+import * as XLSX from "xlsx";
+import { createGrid } from "ag-grid-community";
 
-document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
-<section id="center">
-  <div class="hero">
-    <img src="${heroImg}" class="base" width="170" height="179">
-    <img src="${typescriptLogo}" class="framework" alt="TypeScript logo"/>
-    <img src="${viteLogo}" class="vite" alt="Vite logo" />
+import "ag-grid-community/styles/ag-grid.css";
+import "ag-grid-community/styles/ag-theme-quartz.css";
+
+document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
+  <h1>CSV / Excel Viewer</h1>
+
+  <input type="file" id="fileInput" />
+
+  <div
+    id="grid"
+    class="ag-theme-quartz"
+    style="height:600px;width:100%;margin-top:1rem;"
+  >
   </div>
-  <div>
-    <h1>Get started</h1>
-    <p>Edit <code>src/main.ts</code> and save to test <code>HMR</code></p>
-  </div>
-  <button id="counter" type="button" class="counter"></button>
-</section>
+`;
 
-<div class="ticks"></div>
+const fileInput = document.getElementById("fileInput") as HTMLInputElement;
+const output = document.getElementById("output") as HTMLPreElement;
 
-<section id="next-steps">
-  <div id="docs">
-    <svg class="icon" role="presentation" aria-hidden="true"><use href="/icons.svg#documentation-icon"></use></svg>
-    <h2>Documentation</h2>
-    <p>Your questions, answered</p>
-    <ul>
-      <li>
-        <a href="https://vite.dev/" target="_blank">
-          <img class="logo" src="${viteLogo}" alt="" />
-          Explore Vite
-        </a>
-      </li>
-      <li>
-        <a href="https://www.typescriptlang.org" target="_blank">
-          <img class="button-icon" src="${typescriptLogo}" alt="">
-          Learn more
-        </a>
-      </li>
-    </ul>
-  </div>
-  <div id="social">
-    <svg class="icon" role="presentation" aria-hidden="true"><use href="/icons.svg#social-icon"></use></svg>
-    <h2>Connect with us</h2>
-    <p>Join the Vite community</p>
-    <ul>
-      <li><a href="https://github.com/vitejs/vite" target="_blank"><svg class="button-icon" role="presentation" aria-hidden="true"><use href="/icons.svg#github-icon"></use></svg>GitHub</a></li>
-      <li><a href="https://chat.vite.dev/" target="_blank"><svg class="button-icon" role="presentation" aria-hidden="true"><use href="/icons.svg#discord-icon"></use></svg>Discord</a></li>
-      <li><a href="https://x.com/vite_js" target="_blank"><svg class="button-icon" role="presentation" aria-hidden="true"><use href="/icons.svg#x-icon"></use></svg>X.com</a></li>
-      <li><a href="https://bsky.app/profile/vite.dev" target="_blank"><svg class="button-icon" role="presentation" aria-hidden="true"><use href="/icons.svg#bluesky-icon"></use></svg>Bluesky</a></li>
-    </ul>
-  </div>
-</section>
+fileInput.addEventListener("change", async () => {
+  const file = fileInput.files?.[0];
 
-<div class="ticks"></div>
-<section id="spacer"></section>
-`
+  if (!file) {
+    return;
+  }
 
-setupCounter(document.querySelector<HTMLButtonElement>('#counter')!)
+  const buffer = await file.arrayBuffer();
+
+  const workbook = XLSX.read(buffer);
+
+  const firstSheet =
+    workbook.Sheets[workbook.SheetNames[0]];
+
+  const rows =
+    XLSX.utils.sheet_to_json(firstSheet);
+  console.log(rows);
+  // looks like the first row is omitted. maybe presumed it is a header/label?
+
+  const firstRow = rows[0] as Record<string, unknown>;
+  // as Record<string, unknown> specifies object type?
+
+  const columnDefs:Array<object> =
+  Object.keys(firstRow).map(col => (
+      { field: col }
+    ));
+
+  console.log(columnDefs);
+  // [ {field: "date"}, {field: "order"}, ...]
+
+  const gridDiv =
+    document.getElementById("grid")!;
+
+  createGrid(gridDiv, {
+    columnDefs,
+    rowData      : rows,
+    defaultColDef: {
+      sortable : true,
+      filter   : true,
+      resizable: true
+    }
+  });
+  console.log(rows);
+
+  output.textContent =
+    JSON.stringify(rows.slice(0, 5), null, 2);
+});
