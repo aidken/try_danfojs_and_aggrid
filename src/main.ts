@@ -1,5 +1,6 @@
 import * as XLSX from "xlsx";
 import { createGrid } from "ag-grid-community";
+import { Temporal } from '@js-temporal/polyfill';
 
 import "ag-grid-community/styles/ag-grid.css";
 import "ag-grid-community/styles/ag-theme-quartz.css";
@@ -24,6 +25,37 @@ document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
 
 const fileInput = document.getElementById("fileInput") as HTMLInputElement;
 
+function convertExcelSerialToPlainDate(serial: number): Temporal.PlainDate {
+  const excelEpoch =
+    new Date(Date.UTC(1899, 11, 30));
+
+  const milliseconds =
+    serial * 24 * 60 * 60 * 1000;
+
+  const date =
+    new Date(excelEpoch.getTime() + milliseconds);
+
+  return Temporal.PlainDate.from({
+    year: date.getUTCFullYear(),
+    month: date.getUTCMonth() + 1,
+    day: date.getUTCDate()
+  });
+}
+
+function isExcelDateCell(cell: XLSX.CellObject): boolean {
+
+  if (cell.t !== "n") {return false;}
+
+  const format =
+    cell.z?.toLowerCase() ?? "";
+
+  return (
+    format.includes("yy") ||
+    format.includes("mm") ||
+    format.includes("dd")
+  );
+}
+
 fileInput.addEventListener("change", async () => {
   const file = fileInput.files?.[0];
 
@@ -33,18 +65,45 @@ fileInput.addEventListener("change", async () => {
 
   const buffer = await file.arrayBuffer();
 
-  const workbook = XLSX.read(buffer);
+  // read workbook
+  const workbook = XLSX.read(
+    buffer,
+    {
+      cellDates: false,
+      cellNF   : true
+    }
+  );
 
+  // read all worksheets
   const sheets: Record<string, any[]> = {};
-
-  // const rows =
-  //   XLSX.utils.sheet_to_json(firstSheet);
-  // console.log(rows);
-  // // sheet_to_json() generates an array of objects.
-  // // and keys are taken from the first row.
-
   for (const sheetName of workbook.SheetNames) {
     const worksheet = workbook.Sheets[sheetName];
+
+    for (const address of Object.keys(worksheet)) {
+
+      if (address.startsWith("!")) {
+        continue;
+      }
+
+      const cell = worksheet[address];
+      // here pass by reference, this does not produce copy
+      // if you want a copy
+      // const cellCopy = {...worksheet[address]};
+
+      if (
+        cell &&
+        isExcelDateCell(cell) &&
+        typeof cell.v === "number"
+      ) {
+
+        cell.v =
+          convertExcelSerialToPlainDate(cell.v)
+            .toString();
+
+        cell.t = "s";
+      }
+    }
+
     sheets[sheetName] = XLSX.utils.sheet_to_json(worksheet);
     // sheet_to_json() generates an array of objects.
     // and keys are taken from the first row.
