@@ -7,8 +7,13 @@ import "ag-grid-community/styles/ag-theme-quartz.css";
 document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
   <h1>CSV / Excel Viewer</h1>
 
+  <div>this is a client side app. upload a csv/excel file and its contents is shown as a data grid.</div>
+
+  <div>data grid is made available with <a href="https://www.ag-grid.com/"></a></div>
+
   <input type="file" id="fileInput" />
 
+  <div id="tabs"></div>
   <div
     id="grid"
     class="ag-theme-quartz"
@@ -18,7 +23,6 @@ document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
 `;
 
 const fileInput = document.getElementById("fileInput") as HTMLInputElement;
-const output = document.getElementById("output") as HTMLPreElement;
 
 fileInput.addEventListener("change", async () => {
   const file = fileInput.files?.[0];
@@ -31,41 +35,58 @@ fileInput.addEventListener("change", async () => {
 
   const workbook = XLSX.read(buffer);
 
-  const firstSheet =
-    workbook.Sheets[workbook.SheetNames[0]];
+  const sheets: Record<string, any[]> = {};
 
-  const rows =
-    XLSX.utils.sheet_to_json(firstSheet);
-  console.log(rows);
-  // sheet_to_json() generates an array of objects.
-  // and keys are taken from the first row.
+  // const rows =
+  //   XLSX.utils.sheet_to_json(firstSheet);
+  // console.log(rows);
+  // // sheet_to_json() generates an array of objects.
+  // // and keys are taken from the first row.
 
-  const firstRow = rows[0] as Record<string, unknown>;
-  // as Record<string, unknown>: type assertion
-  // this does not change value, but does change the way the compiler sees it.
+  for (const sheetName of workbook.SheetNames) {
+    const worksheet = workbook.Sheets[sheetName];
+    sheets[sheetName] = XLSX.utils.sheet_to_json(worksheet);
+    // sheet_to_json() generates an array of objects.
+    // and keys are taken from the first row.
+  }
 
-  const columnDefs:Array<object> =
-  Object.keys(firstRow).map(col => (
-      { field: col }
-    ));
-
-  console.log(columnDefs);
-  // [ {field: "date"}, {field: "order"}, ...]
+  // tabsDiv
+  const tabsDiv = document.getElementById("tabs")!;
+  for (const sheetName of workbook.SheetNames) {
+    const button = document.createElement("button");
+    button.textContent = sheetName;
+    button.addEventListener("click", () => {
+      showSheet(sheetName);
+    });
+    tabsDiv.appendChild(button);
+  }
 
   const gridDiv =
     document.getElementById("grid")!;
 
-  createGrid(gridDiv, {
-    columnDefs,
-    rowData      : rows,
-    defaultColDef: {
-      sortable : true,
-      filter   : true,
-      resizable: true
-    }
-  });
-  console.log(rows);
+  function showSheet(sheetName: string) {
+    const rows = sheets[sheetName];
+    console.log('showSheet() invoked.');
+    console.log(rows);
 
-  output.textContent =
-    JSON.stringify(rows.slice(0, 5), null, 2);
+    // pick up column labels from the first record
+    const firstRow = rows[0] as Record<string, unknown>;
+    const columnDefs = Object.keys(firstRow).map(col => ({
+      field: col
+    }));
+
+    // clear gridDiv so that createGrid() reuses it.
+    gridDiv.innerHTML = "";
+    createGrid(gridDiv, {
+      columnDefs,
+      rowData: rows,
+      defaultColDef: {
+        sortable : true,
+        filter   : true,
+        resizable: true
+      }
+    });
+
+  }
+
 });
