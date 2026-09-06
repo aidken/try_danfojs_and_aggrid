@@ -46,8 +46,11 @@ function isExcelDateCell(cell: XLSX.CellObject): boolean {
 
   if (cell.t !== "n") {return false;}
 
-  const format =
-    cell.z?.toLowerCase() ?? "";
+  let format = "";
+  if (cell.z) {
+    format = String(cell.z).toLowerCase();
+    // cell.z?.toLowerCase() ?? "";
+  }
 
   return (
     format.includes("yy") ||
