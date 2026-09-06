@@ -85,7 +85,14 @@ document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
 
   <div>this is a client side app. upload a csv/excel file and its contents is shown as a data grid.</div>
 
-  <div>data grid is made available with <a href="https://www.ag-grid.com/"></a></div>
+  <div>data grid is made available with <a href="https://www.ag-grid.com/">ag-grid</a>.</div>
+
+  <button class="btn btn-clear" id="clearBtn">
+    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+    </svg>
+    Clear
+  </button>
 
   <div class="upload-area" id="uploadArea">
       <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -107,13 +114,22 @@ document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
   </body>
 `;
 
-const uploadArea =
-  document.getElementById("uploadArea") as HTMLDivElement;
+const uploadArea = document.getElementById("uploadArea") as HTMLDivElement;
+const fileInput = document.getElementById("fileInput") as HTMLDivElement;
+const clearButton = document.getElementById("clearBtn") as HTMLButtonElement;
+const tabsDiv = document.getElementById("tabs")!;
+const gridDiv = document.getElementById("grid")!;
 
-// Click to upload
+// clear button
+clearButton.addEventListener('click', () => {
+  tabsDiv.innerHTML = "";
+  gridDiv.innerHTML = "";
+});
+
+// click the drop area to upload
 uploadArea.addEventListener('click', () => fileInput.click());
 
-// Drag and drop
+// drag and drop
 uploadArea.addEventListener('dragover', (e) => {
   e.preventDefault();
   uploadArea.classList.add('dragover');
@@ -129,8 +145,6 @@ uploadArea.addEventListener('drop', (e) => {
   const file = e.dataTransfer?.files[0];
   if (file) showFileInGrid(file);
 });
-
-const fileInput = document.getElementById("fileInput") as HTMLDivElement;
 
 // File input change
 fileInput.addEventListener('change', (e) => {
@@ -165,6 +179,7 @@ function isExcelDateCell(cell: XLSX.CellObject): boolean {
   );
 }
 
+// now fileInput is not visible
 // fileInput.addEventListener("change", (e) => {
 //   // const target = e.target as HTMLInputElement;
 //   const file = e.target?.files[0];
@@ -175,16 +190,12 @@ async function showFileInGrid(file:File) {
 
   if (!file) return;
 
-  const buffer = await file.arrayBuffer();
+  tabsDiv.innerHTML = "";
+  gridDiv.innerHTML = "";
 
+  const buffer = await file.arrayBuffer();
   // read workbook
-  const workbook = XLSX.read(
-    buffer,
-    {
-      cellDates: false,
-      cellNF   : true
-    }
-  );
+  const workbook = XLSX.read(buffer, {cellDates: false, cellNF: true});
 
   // read all worksheets
   const sheets: Record<string, any[]> = {};
@@ -222,7 +233,6 @@ async function showFileInGrid(file:File) {
   }
 
   // tabsDiv
-  const tabsDiv = document.getElementById("tabs")!;
   for (const sheetName of workbook.SheetNames) {
     const button = document.createElement("button");
     button.textContent = sheetName;
@@ -231,9 +241,6 @@ async function showFileInGrid(file:File) {
     });
     tabsDiv.appendChild(button);
   }
-
-  const gridDiv =
-    document.getElementById("grid")!;
 
   function showSheet(sheetName: string) {
     const rows = sheets[sheetName];
@@ -260,4 +267,4 @@ async function showFileInGrid(file:File) {
 
   }
 
-};
+}; // end async function showDataInGrid()
